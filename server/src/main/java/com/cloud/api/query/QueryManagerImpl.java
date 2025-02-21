@@ -1178,8 +1178,8 @@ public class QueryManagerImpl extends MutualExclusiveIdsManagerBase implements Q
 
     @Override
     public ListResponse<UserVmResponse> searchForUserVMs(ListVMsCmd cmd) {
-        Pair<List<UserVmJoinVO>, Integer> result = searchForUserVMsInternal(cmd);
         ListResponse<UserVmResponse> response = new ListResponse<>();
+        Pair<List<UserVmJoinVO>, Integer> result = searchForUserVMsInternal(cmd);
 
         if (cmd.getRetrieveOnlyResourceCount()) {
             response.setResponses(new ArrayList<>(), result.second());
@@ -1475,6 +1475,12 @@ public class QueryManagerImpl extends MutualExclusiveIdsManagerBase implements Q
             resourceTagSearch.cp();
 
             userVmSearchBuilder.join("tags", resourceTagSearch, resourceTagSearch.entity().getResourceId(), userVmSearchBuilder.entity().getId(), JoinBuilder.JoinType.INNER);
+        }
+
+        if (cmd.getOnlyLeasedInstances() != null && cmd.getOnlyLeasedInstances()) {
+            SearchBuilder<UserVmDetailVO> leasedInstancesSearch = userVmDetailsDao.createSearchBuilder();
+            leasedInstancesSearch.and(VmDetailConstants.INSTANCE_LEASE_EXPIRY_DATE, leasedInstancesSearch.entity().getName(), SearchCriteria.Op.NNULL);
+            userVmSearchBuilder.join("userVmToLeased", leasedInstancesSearch, leasedInstancesSearch.entity().getResourceId(), userVmSearchBuilder.entity().getId(), JoinBuilder.JoinType.INNER);
         }
 
         if (keyPairName != null) {
