@@ -40,6 +40,7 @@ import com.cloud.user.UserStatisticsVO;
 import com.cloud.user.dao.UserDao;
 import com.cloud.user.dao.UserStatisticsDao;
 import com.cloud.uservm.UserVm;
+import com.cloud.utils.DateUtil;
 import com.cloud.utils.db.SearchBuilder;
 import com.cloud.utils.db.SearchCriteria;
 import com.cloud.utils.db.SearchCriteria.Op;
@@ -67,6 +68,7 @@ import org.apache.cloudstack.api.response.UserVmResponse;
 import org.apache.cloudstack.api.response.VnfNicResponse;
 import org.apache.cloudstack.context.CallContext;
 import org.apache.cloudstack.framework.config.dao.ConfigurationDao;
+import org.apache.cloudstack.framework.config.impl.ConfigurationVO;
 import org.apache.cloudstack.query.QueryService;
 import org.apache.cloudstack.vm.lease.VMLeaseManagerImpl;
 import org.apache.commons.collections.CollectionUtils;
@@ -113,6 +115,8 @@ public class UserVmJoinDaoImpl extends GenericDaoBaseWithTagInformation<UserVmJo
     VnfTemplateDetailsDao vnfTemplateDetailsDao;
     @Inject
     VnfTemplateNicDao vnfTemplateNicDao;
+    @Inject
+    ConfigurationDao configurationDao;
 
     private final SearchBuilder<UserVmJoinVO> VmDetailSearch;
     private final SearchBuilder<UserVmJoinVO> activeVmByIsoSearch;
@@ -136,8 +140,8 @@ public class UserVmJoinDaoImpl extends GenericDaoBaseWithTagInformation<UserVmJo
         leaseOverInstanceSearch.selectFields(leaseOverInstanceSearch.entity().getId(), leaseOverInstanceSearch.entity().getState(),
                 leaseOverInstanceSearch.entity().isDeleteProtection(), leaseOverInstanceSearch.entity().getUuid(),
                 leaseOverInstanceSearch.entity().getLeaseExpiryAction());
-        leaseOverInstanceSearch.and(VmDetailConstants.INSTANCE_LEASE_ACTION_EXECUTION_DATE, leaseOverInstanceSearch.entity().getLeaseActionExecutionDate(), Op.NULL);
-        leaseOverInstanceSearch.and("vmCreatedDate", leaseOverInstanceSearch.entity().getId(), Op.GTEQ);
+        leaseOverInstanceSearch.and(VmDetailConstants.INSTANCE_LEASE_EXECUTED_ACTION, leaseOverInstanceSearch.entity().getLeaseActionExecuted(), Op.NULL);
+        leaseOverInstanceSearch.and("vmCreatedDate", leaseOverInstanceSearch.entity().getCreated(), Op.GTEQ);
         leaseOverInstanceSearch.and("leaseExpired", leaseOverInstanceSearch.entity().getLeaseExpiryDate(), Op.LT);
         leaseOverInstanceSearch.and("leaseExpiryActions", leaseOverInstanceSearch.entity().getLeaseExpiryAction(), Op.IN);
         leaseOverInstanceSearch.and("instanceState", leaseOverInstanceSearch.entity().getState(), Op.NOTIN);
@@ -148,9 +152,12 @@ public class UserVmJoinDaoImpl extends GenericDaoBaseWithTagInformation<UserVmJo
 
         leaseExpiringInstanceSearch = createSearchBuilder();
         leaseExpiringInstanceSearch.selectFields(leaseExpiringInstanceSearch.entity().getId(), leaseExpiringInstanceSearch.entity().getUuid(),
-                leaseExpiringInstanceSearch.entity().getPodId(), leaseExpiringInstanceSearch.entity().getDataCenterId());
+                leaseExpiringInstanceSearch.entity().getUserId(), leaseExpiringInstanceSearch.entity().getDomainId(),
+                leaseExpiringInstanceSearch.entity().getAccountId(), leaseExpiringInstanceSearch.entity().getLeaseExpiryAction());
+        leaseExpiringInstanceSearch.and(VmDetailConstants.INSTANCE_LEASE_EXECUTED_ACTION, leaseOverInstanceSearch.entity().getLeaseActionExecuted(), Op.NULL);
+        leaseExpiringInstanceSearch.and("vmCreatedDate", leaseExpiringInstanceSearch.entity().getCreated(), Op.GTEQ);
         leaseExpiringInstanceSearch.and("leaseCurrentDate", leaseExpiringInstanceSearch.entity().getLeaseExpiryDate(), Op.GTEQ);
-        leaseExpiringInstanceSearch.and("leaseExpiresOnDate", leaseExpiringInstanceSearch.entity().getLeaseExpiryDate(), Op.LT);
+        leaseExpiringInstanceSearch.and("leaseExpiryEndDate", leaseExpiringInstanceSearch.entity().getLeaseExpiryDate(), Op.LT);
         leaseExpiringInstanceSearch.done();
 
     }
@@ -476,10 +483,14 @@ public class UserVmJoinDaoImpl extends GenericDaoBaseWithTagInformation<UserVmJo
         }
 
         if (VMLeaseManagerImpl.InstanceLeaseEnabled.value() && userVm.getLeaseExpiryDate() != null) {
-            userVmResponse.setLeaseExpiryAction(userVm.getLeaseExpiryAction());
-            userVmResponse.setLeaseExpiryDate(userVm.getLeaseExpiryDate());
-            long leaseDuration = getLeaseDuration(new Date(), userVm.getLeaseExpiryDate());
-            userVmResponse.setLeaseDuration(leaseDuration);
+            ConfigurationVO vo = configurationDao.findById(VMLeaseManagerImpl.INSTANCE_LEASE_ENABLED);
+            Date featureEnablementDate = vo.getUpdated();
+            if (DateUtil.getTimeDifference(userVm.getCreated(), featureEnablementDate) >= 0) {
+                userVmResponse.setLeaseExpiryAction(userVm.getLeaseExpiryAction());
+                userVmResponse.setLeaseExpiryDate(userVm.getLeaseExpiryDate());
+                long leaseDuration = getLeaseDuration(new Date(), userVm.getLeaseExpiryDate());
+                userVmResponse.setLeaseDuration(leaseDuration);
+            }
         }
 
         addVmRxTxDataToResponse(userVm, userVmResponse);
@@ -770,7 +781,7 @@ public class UserVmJoinDaoImpl extends GenericDaoBaseWithTagInformation<UserVmJo
      * @return list of instances, expiry action can be executed on
      */
     @Override
-    public List<UserVmJoinVO> listEligibleInstancesWithExpiredLease(Date featureEnabledDate) {
+    public List<UserVmJoinVO> listEligibleInstancesWithExpiredLease(Date featureEnablementDate) {
         SearchCriteria<UserVmJoinVO> sc = leaseOverInstanceSearch.create();
         sc.setParameters("leaseExpired", new Date());
         sc.setParameters("leaseExpiryActions", "STOP", "DESTROY");
@@ -778,24 +789,36 @@ public class UserVmJoinDaoImpl extends GenericDaoBaseWithTagInformation<UserVmJo
         sc.setParameters("stoppedInstanceState", State.Stopped);
         sc.setParameters("stopLeaseAction", "STOP");
 
-        if (featureEnabledDate != null) {
-            sc.setParameters("vmCreatedDate", featureEnabledDate);
+        if (featureEnablementDate != null) {
+            sc.setParameters("vmCreatedDate", featureEnablementDate);
         }
 
         return listBy(sc);
     }
 
 
+    /**
+     * This method will return instances which are expiring within days
+     * in case negative value is given, there won't be any endDate
+     * @param days
+     * @param featureEnablementDate
+     * @return
+     */
     @Override
-    public List<UserVmJoinVO> listLeaseInstancesExpiringInDays(int days) {
+    public List<UserVmJoinVO> listLeaseInstancesExpiringInDays(int days, Date featureEnablementDate) {
         SearchCriteria<UserVmJoinVO> sc = leaseExpiringInstanceSearch.create();
         Date currentDate = new Date();
-        Calendar calendar = Calendar.getInstance();
-        calendar.setTime(currentDate);
-        calendar.add(Calendar.DAY_OF_MONTH, days);
-        Date nextDate = calendar.getTime();
         sc.setParameters("leaseCurrentDate", currentDate);
-        sc.setParameters("leaseExpiresOnDate", nextDate);
+        if (days > 0) {
+            Calendar calendar = Calendar.getInstance();
+            calendar.setTime(currentDate);
+            calendar.add(Calendar.DAY_OF_MONTH, days);
+            Date nextDate = calendar.getTime();
+            sc.setParameters("leaseExpiryEndDate", nextDate);
+        }
+        if (featureEnablementDate != null) {
+            sc.setParameters("vmCreatedDate", featureEnablementDate);
+        }
         return listBy(sc);
     }
 }

@@ -822,7 +822,8 @@ export default {
             }
             return Promise.resolve()
           }
-        }]
+        }],
+        leaseduration: [this.naturalNumberRule]
       })
     },
     fetchData () {

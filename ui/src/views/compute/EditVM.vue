@@ -194,7 +194,7 @@ export default {
         loading: false,
         opts: []
       },
-      isLeaseEditable: this.$store.getters.features.instanceleaseenabled && this.resource.leaseduration !== undefined && this.resource.leaseduration > -1,
+      isLeaseEditable: this.$store.getters.features.instanceleaseenabled && this.resource.leaseduration > -1,
       showLeaseOptions: false,
       leaseduration: this.resource.leaseduration === undefined ? 90 : this.resource.leaseduration,
       leaseexpiryaction: this.resource.leaseexpiryaction === undefined ? 'STOP' : this.resource.leaseexpiryaction,

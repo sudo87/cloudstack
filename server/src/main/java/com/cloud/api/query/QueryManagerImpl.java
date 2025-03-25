@@ -1330,9 +1330,9 @@ public class QueryManagerImpl extends MutualExclusiveIdsManagerBase implements Q
             }
         }
 
-        boolean requestingOnlyLeasedInstances = cmd.getOnlyLeasedInstances() != null && cmd.getOnlyLeasedInstances();
-        if (!VMLeaseManagerImpl.InstanceLeaseEnabled.value() && requestingOnlyLeasedInstances) {
-            throw new InvalidParameterValueException("Enable lease feature to use leased=true");
+        if (!VMLeaseManagerImpl.InstanceLeaseEnabled.value() && cmd.getOnlyLeasedInstances()) {
+            throw new InvalidParameterValueException(" Cannot list leased instances because the Instance Lease feature " +
+                    "is disabled, please enable it to list leased instances");
         }
 
         Ternary<Long, Boolean, ListProjectResourcesCriteria> domainIdRecursiveListProject = new Ternary<>(cmd.getDomainId(), cmd.isRecursive(), null);
@@ -1488,7 +1488,7 @@ public class QueryManagerImpl extends MutualExclusiveIdsManagerBase implements Q
             userVmSearchBuilder.join("tags", resourceTagSearch, resourceTagSearch.entity().getResourceId(), userVmSearchBuilder.entity().getId(), JoinBuilder.JoinType.INNER);
         }
 
-        if (requestingOnlyLeasedInstances) {
+        if (cmd.getOnlyLeasedInstances()) {
             SearchBuilder<UserVmDetailVO> leasedInstancesSearch = userVmDetailsDao.createSearchBuilder();
             leasedInstancesSearch.and(leasedInstancesSearch.entity().getName(), SearchCriteria.Op.EQ).values(VmDetailConstants.INSTANCE_LEASE_EXPIRY_DATE);
             userVmSearchBuilder.join("userVmToLeased", leasedInstancesSearch, leasedInstancesSearch.entity().getResourceId(),

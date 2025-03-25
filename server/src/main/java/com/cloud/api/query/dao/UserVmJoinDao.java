@@ -47,7 +47,7 @@ public interface UserVmJoinDao extends GenericDao<UserVmJoinVO, Long> {
     List<UserVmJoinVO> listByAccountServiceOfferingTemplateAndNotInState(long accountId,
              List<VirtualMachine.State> states, List<Long> offeringIds, List<Long> templateIds);
 
-    List<UserVmJoinVO> listEligibleInstancesWithExpiredLease(Date featureEnabledDate);
+    List<UserVmJoinVO> listEligibleInstancesWithExpiredLease(Date featureEnablementDate);
 
-    List<UserVmJoinVO> listLeaseInstancesExpiringInDays(int days);
+    List<UserVmJoinVO> listLeaseInstancesExpiringInDays(int days, Date featureEnablementDate);
 }

@@ -16,17 +16,7 @@
 // under the License.
 package org.apache.cloudstack.framework.config.dao;
 
-import java.sql.PreparedStatement;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
-import javax.annotation.PostConstruct;
-import javax.naming.ConfigurationException;
-
-import org.apache.cloudstack.framework.config.impl.ConfigurationVO;
-import org.springframework.stereotype.Component;
-
+import com.cloud.utils.DateUtil;
 import com.cloud.utils.component.ComponentLifecycle;
 import com.cloud.utils.crypt.DBEncryptionUtil;
 import com.cloud.utils.db.DB;
@@ -35,6 +25,16 @@ import com.cloud.utils.db.SearchBuilder;
 import com.cloud.utils.db.SearchCriteria;
 import com.cloud.utils.db.TransactionLegacy;
 import com.cloud.utils.exception.CloudRuntimeException;
+import org.apache.cloudstack.framework.config.impl.ConfigurationVO;
+import org.springframework.stereotype.Component;
+
+import javax.annotation.PostConstruct;
+import javax.naming.ConfigurationException;
+import java.sql.PreparedStatement;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 @Component
 public class ConfigurationDaoImpl extends GenericDaoBase<ConfigurationVO, String> implements ConfigurationDao {
@@ -45,7 +45,7 @@ public class ConfigurationDaoImpl extends GenericDaoBase<ConfigurationVO, String
     final SearchBuilder<ConfigurationVO> NameSearch;
     final SearchBuilder<ConfigurationVO> PartialSearch;
 
-    public static final String UPDATE_CONFIGURATION_SQL = "UPDATE configuration SET value = ? WHERE name = ?";
+    public static final String UPDATE_CONFIGURATION_SQL = "UPDATE configuration SET value = ?, updated = ? WHERE name = ?";
 
     public ConfigurationDaoImpl() {
         InstanceSearch = createSearchBuilder();
@@ -143,9 +143,11 @@ public class ConfigurationDaoImpl extends GenericDaoBase<ConfigurationVO, String
     @Deprecated
     public boolean update(String name, String value) {
         TransactionLegacy txn = TransactionLegacy.currentTxn();
+        String dateVal = DateUtil.getDateDisplayString(DateUtil.GMT_TIMEZONE, new Date());
         try (PreparedStatement stmt = txn.prepareStatement(UPDATE_CONFIGURATION_SQL);){
             stmt.setString(1, value);
-            stmt.setString(2, name);
+            stmt.setString(2, dateVal);
+            stmt.setString(3, name);
             stmt.executeUpdate();
             return true;
         } catch (Exception e) {
@@ -157,11 +159,14 @@ public class ConfigurationDaoImpl extends GenericDaoBase<ConfigurationVO, String
     @Override
     public boolean update(String name, String category, String value) {
         TransactionLegacy txn = TransactionLegacy.currentTxn();
+        String dateVal = DateUtil.getDateDisplayString(DateUtil.GMT_TIMEZONE, new Date());
+
         try {
             value = ("Hidden".equals(category) || "Secure".equals(category)) ? DBEncryptionUtil.encrypt(value) : value;
             try (PreparedStatement stmt = txn.prepareStatement(UPDATE_CONFIGURATION_SQL);) {
                 stmt.setString(1, value);
-                stmt.setString(2, name);
+                stmt.setString(2, dateVal);
+                stmt.setString(3, name);
                 stmt.executeUpdate();
                 return true;
             }
