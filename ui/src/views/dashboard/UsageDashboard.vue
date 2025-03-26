@@ -70,7 +70,7 @@
                 :value="data.leasedinstances"
                 :value-style="{ color: $config.theme['@primary-color'] }">
                 <template #prefix>
-                  <clock-circle-outlined/>&nbsp;
+                  <field-time-outlined/>&nbsp;
                 </template>
               </a-statistic>
             </router-link>
@@ -567,7 +567,7 @@ export default {
         this.data.stopped = json?.listvirtualmachinesresponse?.count
       })
       if (this.isLeaseFeatureEnabled) {
-        api('listVirtualMachines', { leased: true, listall: true, details: 'min', page: 1, pagesize: 1 }).then(json => {
+        api('listVirtualMachines', { leased: true, listall: true, details: 'min', filter: 'leaseduration' }).then(json => {
           this.loading = false
           this.data.leasedinstances = json?.listvirtualmachinesresponse?.count
           if (!this.data.leasedinstances) {

@@ -38,8 +38,8 @@
       </template>
       <template #displayText="{ record }">
         <span>{{ record.name }}</span>
-        <a-tag v-if="record.leaseduration" :color="this.$config.theme['@error-color']" style="margin-left: 5px">
-                {{ $t('label.remainingdays') + ': '+ (record.leaseduration) }}
+        <a-tag v-if="record.leaseduration" style="margin-left: 5px">
+                {{ $t('label.remainingdays') + ': '+ (record.leaseduration) +  'd' }}
         </a-tag>
       </template>
     </a-table>
@@ -193,7 +193,6 @@ export default {
         if (this.allowAllOfferings) {
           disabled = false
         }
-        // var computedName = (item.leaseduration !== undefined) ? item.name + ': ' + item.leaseduration : item.name
         return {
           key: item.id,
           name: item.name,

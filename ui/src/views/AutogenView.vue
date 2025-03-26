@@ -1768,6 +1768,8 @@ export default {
           query.domainid = this.$store.getters.userInfo.domainid
         } else if (['running', 'stopped'].includes(filter)) {
           query.state = filter
+        } else if (filter === 'leased') {
+          query.leased = true
         }
       } else if (this.$route.name === 'comment') {
         query.annotationfilter = filter
