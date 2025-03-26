@@ -1500,6 +1500,12 @@ public class QueryManagerImpl extends MutualExclusiveIdsManagerBase implements Q
             leasedInstancesSearch.and(leasedInstancesSearch.entity().getName(), SearchCriteria.Op.EQ).values(VmDetailConstants.INSTANCE_LEASE_EXPIRY_DATE);
             userVmSearchBuilder.join("userVmToLeased", leasedInstancesSearch, leasedInstancesSearch.entity().getResourceId(),
                     userVmSearchBuilder.entity().getId(), JoinBuilder.JoinType.INNER);
+
+            SearchBuilder<UserVmDetailVO> leaseActionNotTakenSearch = userVmDetailsDao.createSearchBuilder();
+            leaseActionNotTakenSearch.and(leaseActionNotTakenSearch.entity().getValue(), Op.NULL);
+            userVmSearchBuilder.join("leaseActionNotTaken", leaseActionNotTakenSearch, JoinBuilder.JoinType.LEFT, JoinBuilder.JoinCondition.AND,
+                    userVmSearchBuilder.entity().getId(), leaseActionNotTakenSearch.entity().getResourceId(),
+                    leaseActionNotTakenSearch.entity().getName(), "leaseactionexecuted");
         }
 
         if (keyPairName != null) {
