@@ -15,6 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
+import { createApp, h } from 'vue'
 import { vueApp, vueProps } from './vue-app'
 import router from './router'
 import store from './store'
@@ -60,20 +61,50 @@ vueApp.use(imagesUtilPlugin)
 vueApp.use(extensions)
 vueApp.use(directives)
 
-fetch('config.json?ts=' + Date.now()).then(response => response.json()).then(config => {
-  vueProps.$config = config
-  let basUrl = config.apiBase
-  if (config.multipleServer) {
-    basUrl = (config.servers[0].apiHost || '') + config.servers[0].apiBase
+const renderError = (err) => {
+  console.error('Fatal error during app initialization:', err)
+  const ErrorComponent = {
+    render: () => h(
+      'div',
+      { style: 'font-family: sans-serif; text-align: center; padding: 2rem;' },
+      [
+        h('h1', { style: 'color: #ff4d4f;' }, 'Application Error'),
+        h('p', 'Could not start the application due to a configuration error.'),
+        h('p', [
+          'Please check that ',
+          h('code', 'config.json'),
+          ' is present and correctly formatted.'
+        ]),
+        h('p', { style: 'color: #888; font-size: 0.9em;' }, 'See the browser console for more details.')
+      ]
+    )
   }
+  createApp(ErrorComponent).mount('#app')
+}
 
-  vueProps.axios.defaults.baseURL = basUrl
-
-  loadLanguageAsync().then(() => {
-    vueApp.use(store)
-      .use(router)
-      .use(i18n)
-      .use(bootstrap)
-      .mount('#app')
+fetch('config.json?ts=' + Date.now())
+  .then(response => {
+    if (!response.ok) {
+      throw new Error(`Failed to fetch config.json: ${response.status} ${response.statusText}`)
+    }
+    return response.json()
   })
-})
+  .then(config => {
+    vueProps.$config = config
+    let basUrl = config.apiBase
+    if (config.multipleServer) {
+      basUrl = (config.servers[0].apiHost || '') + config.servers[0].apiBase
+    }
+
+    vueProps.axios.defaults.baseURL = basUrl
+
+    loadLanguageAsync().then(() => {
+      vueApp.use(store)
+        .use(router)
+        .use(i18n)
+        .use(bootstrap)
+        .mount('#app')
+    })
+  }).catch(error => {
+    renderError(error)
+  })
