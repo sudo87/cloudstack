@@ -466,6 +466,7 @@ export default {
       return available <= 0 ? '#ff4d4f' : '#52c41a'
     },
     fetchData () {
+      this.loading = true
       if (store.getters.project.id) {
         this.listProject()
       } else {
@@ -474,22 +475,18 @@ export default {
       this.updateData()
     },
     listAccount () {
-      this.loading = true
       getAPI('listAccounts', { id: this.$store.getters.userInfo.accountid }).then(json => {
-        this.loading = false
         if (json && json.listaccountsresponse && json.listaccountsresponse.account) {
           this.account = json.listaccountsresponse.account[0]
         }
       })
     },
     listProject () {
-      this.loading = true
       const params = {
         id: store.getters.project.id,
         listall: true
       }
       getAPI('listProjects', params).then(json => {
-        this.loading = false
         if (json?.listprojectsresponse?.project) {
           this.project = json.listprojectsresponse.project[0]
         }
@@ -510,82 +507,94 @@ export default {
       }
       this.listInstances()
       this.listEvents()
+
+      const promises = []
       if ('listKubernetesClusters' in this.$store.getters.apis) {
-        this.loading = true
-        getAPI('listKubernetesClusters', { listall: true, page: 1, pagesize: 1 }).then(json => {
-          this.loading = false
-          this.data.kubernetes = json?.listkubernetesclustersresponse?.count
-        })
+        promises.push(getAPI('listKubernetesClusters', { listall: true, page: 1, pagesize: 1 }))
       }
       if ('listVolumes' in this.$store.getters.apis) {
-        this.loading = true
-        getAPI('listVolumes', { listall: true, page: 1, pagesize: 1 }).then(json => {
-          this.loading = false
-          this.data.volumes = json?.listvolumesresponse?.count
-        })
+        promises.push(getAPI('listVolumes', { listall: true, page: 1, pagesize: 1 }))
       }
       if ('listSnapshots' in this.$store.getters.apis) {
-        this.loading = true
-        getAPI('listSnapshots', { listall: true, page: 1, pagesize: 1 }).then(json => {
-          this.loading = false
-          this.data.snapshots = json?.listsnapshotsresponse?.count
-        })
+        promises.push(getAPI('listSnapshots', { listall: true, page: 1, pagesize: 1 }))
       }
       if ('listNetworks' in this.$store.getters.apis) {
-        this.loading = true
-        getAPI('listNetworks', { listall: true, page: 1, pagesize: 1 }).then(json => {
-          this.loading = false
-          this.data.networks = json?.listnetworksresponse?.count
-        })
+        promises.push(getAPI('listNetworks', { listall: true, page: 1, pagesize: 1 }))
       }
       if ('listVPCs' in this.$store.getters.apis) {
-        this.loading = true
-        getAPI('listVPCs', { listall: true, page: 1, pagesize: 1 }).then(json => {
-          this.loading = false
-          this.data.vpcs = json?.listvpcsresponse?.count
-        })
+        promises.push(getAPI('listVPCs', { listall: true, page: 1, pagesize: 1 }))
       }
       if ('listPublicIpAddresses' in this.$store.getters.apis) {
-        this.loading = true
-        getAPI('listPublicIpAddresses', { listall: true, page: 1, pagesize: 1 }).then(json => {
-          this.loading = false
-          this.data.ips = json?.listpublicipaddressesresponse?.count
-        })
+        promises.push(getAPI('listPublicIpAddresses', { listall: true, page: 1, pagesize: 1 }))
       }
       if ('listTemplates' in this.$store.getters.apis) {
-        this.loading = true
-        getAPI('listTemplates', { templatefilter: 'self', listall: true, page: 1, pagesize: 1 }).then(json => {
-          this.loading = false
-          this.data.templates = json?.listtemplatesresponse?.count
-        })
+        promises.push(getAPI('listTemplates', { templatefilter: 'self', listall: true, page: 1, pagesize: 1 }))
       }
+
+      if (promises.length === 0) {
+        return
+      }
+
+      this.loading = true
+      Promise.all(promises).then(json => {
+        let index = 0
+        if ('listKubernetesClusters' in this.$store.getters.apis) {
+          this.data.kubernetes = json[index]?.listkubernetesclustersresponse?.count || 0
+          index++
+        }
+        if ('listVolumes' in this.$store.getters.apis) {
+          this.data.volumes = json[index]?.listvolumesresponse?.count || 0
+          index++
+        }
+        if ('listSnapshots' in this.$store.getters.apis) {
+          this.data.snapshots = json[index]?.listsnapshotsresponse?.count || 0
+          index++
+        }
+        if ('listNetworks' in this.$store.getters.apis) {
+          this.data.networks = json[index]?.listnetworksresponse?.count || 0
+          index++
+        }
+        if ('listVPCs' in this.$store.getters.apis) {
+          this.data.vpcs = json[index]?.listvpcsresponse?.count || 0
+          index++
+        }
+        if ('listPublicIpAddresses' in this.$store.getters.apis) {
+          this.data.ips = json[index]?.listpublicipaddressesresponse?.count || 0
+          index++
+        }
+        if ('listTemplates' in this.$store.getters.apis) {
+          this.data.templates = json[index]?.listtemplatesresponse?.count || 0
+        }
+      }).finally(() => {
+        this.loading = false
+      })
     },
     listInstances () {
       if (!('listVirtualMachines' in this.$store.getters.apis)) {
         return
       }
       this.loading = true
-      getAPI('listVirtualMachines', { listall: true, details: 'min', page: 1, pagesize: 1 }).then(json => {
-        this.loading = false
-        this.data.instances = json?.listvirtualmachinesresponse?.count
-      })
-      getAPI('listVirtualMachines', { listall: true, details: 'min', state: 'running', page: 1, pagesize: 1 }).then(json => {
-        this.loading = false
-        this.data.running = json?.listvirtualmachinesresponse?.count
-      })
-      getAPI('listVirtualMachines', { listall: true, details: 'min', state: 'stopped', page: 1, pagesize: 1 }).then(json => {
-        this.loading = false
-        this.data.stopped = json?.listvirtualmachinesresponse?.count
-      })
+
+      const promises = [
+        getAPI('listVirtualMachines', { listall: true, details: 'min', page: 1, pagesize: 1 }),
+        getAPI('listVirtualMachines', { listall: true, details: 'min', state: 'running', page: 1, pagesize: 1 }),
+        getAPI('listVirtualMachines', { listall: true, details: 'min', state: 'stopped', page: 1, pagesize: 1 })
+      ]
+
       if (this.isLeaseFeatureEnabled) {
-        getAPI('listVirtualMachines', { leased: true, listall: true, details: 'min', page: 1, pagesize: 1 }).then(json => {
-          this.loading = false
-          this.data.leasedinstances = json?.listvirtualmachinesresponse?.count
-          if (!this.data.leasedinstances) {
-            this.data.leasedinstances = 0
-          }
-        })
+        promises.push(getAPI('listVirtualMachines', { leased: true, listall: true, details: 'min', page: 1, pagesize: 1 }))
       }
+
+      Promise.all(promises).then(json => {
+        this.data.instances = json[0]?.listvirtualmachinesresponse?.count || 0
+        this.data.running = json[1]?.listvirtualmachinesresponse?.count || 0
+        this.data.stopped = json[2]?.listvirtualmachinesresponse?.count || 0
+        if (this.isLeaseFeatureEnabled) {
+          this.data.leasedinstances = json[3]?.listvirtualmachinesresponse?.count || 0
+        }
+      }).finally(() => {
+        this.loading = false
+      })
     },
     listEvents () {
       if (!('listEvents' in this.$store.getters.apis)) {
@@ -596,10 +605,8 @@ export default {
         pagesize: 8,
         listall: true
       }
-      this.loading = true
       getAPI('listEvents', params).then(json => {
         this.events = []
-        this.loading = false
         if (json && json.listeventsresponse && json.listeventsresponse.event) {
           this.events = json.listeventsresponse.event
         }

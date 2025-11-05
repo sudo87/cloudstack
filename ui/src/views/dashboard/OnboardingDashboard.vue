@@ -26,7 +26,7 @@
         <div class="title">{{ $t('label.what.is.cloudstack') }}</div>
         <div class="subtitle">{{ $t('label.introduction.to.cloudstack') }}</div>
         <p>{{ $t('message.installwizard.copy.whatiscloudstack') }}</p>
-        <img class="center" src="assets/bg-what-is-cloudstack.png">
+        <img class="center" src="assets/bg-what-is-cloudstack.png" loading="lazy">
         <pre>{{ $t('message.installwizard.cloudstack.helptext.header') }}</pre>
         <pre>{{ $t('message.installwizard.cloudstack.helptext.website') }}<a href="https://cloudstack.apache.org" target="_blank">https://cloudstack.apache.org</a></pre>
         <pre>{{ $t('message.installwizard.cloudstack.helptext.document') }}<a :href="'https://docs.cloudstack.apache.org/en/' + cloudstackminorversion" target="_blank">https://docs.cloudstack.apache.org/en/{{ cloudstackminorversion }}</a></pre>

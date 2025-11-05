@@ -506,61 +506,29 @@ export default {
         routers: 0
       }
       this.loading = true
-      getAPI('listPods', { zoneid: zone.id }).then(json => {
+
+      const promises = [
+        getAPI('listPods', { zoneid: zone.id }),
+        getAPI('listClusters', { zoneid: zone.id }),
+        getAPI('listHosts', { zoneid: zone.id, listall: true, details: 'min', type: 'routing', page: 1, pagesize: 1 }),
+        getAPI('listHosts', { zoneid: zone.id, listall: true, details: 'min', type: 'routing', state: 'alert', page: 1, pagesize: 1 }),
+        getAPI('listStoragePools', { zoneid: zone.id }),
+        getAPI('listSystemVms', { zoneid: zone.id }),
+        getAPI('listRouters', { zoneid: zone.id, listall: true, projectid: '-1' }),
+        getAPI('listVirtualMachines', { zoneid: zone.id, listall: true, projectid: '-1', details: 'min', page: 1, pagesize: 1 })
+      ]
+
+      Promise.all(promises).then(json => {
+        this.data.pods = json[0]?.listpodsresponse?.count || 0
+        this.data.clusters = json[1]?.listclustersresponse?.count || 0
+        this.data.totalHosts = json[2]?.listhostsresponse?.count || 0
+        this.data.alertHosts = json[3]?.listhostsresponse?.count || 0
+        this.data.pools = json[4]?.liststoragepoolsresponse?.count || 0
+        this.data.systemvms = json[5]?.listsystemvmsresponse?.count || 0
+        this.data.routers = json[6]?.listroutersresponse?.count || 0
+        this.data.instances = json[7]?.listvirtualmachinesresponse?.count || 0
+      }).finally(() => {
         this.loading = false
-        this.data.pods = json?.listpodsresponse?.count
-        if (!this.data.pods) {
-          this.data.pods = 0
-        }
-      })
-      getAPI('listClusters', { zoneid: zone.id }).then(json => {
-        this.loading = false
-        this.data.clusters = json?.listclustersresponse?.count
-        if (!this.data.clusters) {
-          this.data.clusters = 0
-        }
-      })
-      getAPI('listHosts', { zoneid: zone.id, listall: true, details: 'min', type: 'routing', page: 1, pagesize: 1 }).then(json => {
-        this.loading = false
-        this.data.totalHosts = json?.listhostsresponse?.count
-        if (!this.data.totalHosts) {
-          this.data.totalHosts = 0
-        }
-      })
-      getAPI('listHosts', { zoneid: zone.id, listall: true, details: 'min', type: 'routing', state: 'alert', page: 1, pagesize: 1 }).then(json => {
-        this.loading = false
-        this.data.alertHosts = json?.listhostsresponse?.count
-        if (!this.data.alertHosts) {
-          this.data.alertHosts = 0
-        }
-      })
-      getAPI('listStoragePools', { zoneid: zone.id }).then(json => {
-        this.loading = false
-        this.data.pools = json?.liststoragepoolsresponse?.count
-        if (!this.data.pools) {
-          this.data.pools = 0
-        }
-      })
-      getAPI('listSystemVms', { zoneid: zone.id }).then(json => {
-        this.loading = false
-        this.data.systemvms = json?.listsystemvmsresponse?.count
-        if (!this.data.systemvms) {
-          this.data.systemvms = 0
-        }
-      })
-      getAPI('listRouters', { zoneid: zone.id, listall: true, projectid: '-1' }).then(json => {
-        this.loading = false
-        this.data.routers = json?.listroutersresponse?.count
-        if (!this.data.routers) {
-          this.data.routers = 0
-        }
-      })
-      getAPI('listVirtualMachines', { zoneid: zone.id, listall: true, projectid: '-1', details: 'min', page: 1, pagesize: 1 }).then(json => {
-        this.loading = false
-        this.data.instances = json?.listvirtualmachinesresponse?.count
-        if (!this.data.instances) {
-          this.data.instances = 0
-        }
       })
     },
     listAlerts () {
@@ -569,10 +537,8 @@ export default {
         pagesize: 8,
         listall: true
       }
-      this.loading = true
       getAPI('listAlerts', params).then(json => {
         this.alerts = []
-        this.loading = false
         if (json && json.listalertsresponse && json.listalertsresponse.alert) {
           this.alerts = json.listalertsresponse.alert
         }
@@ -584,10 +550,8 @@ export default {
         pagesize: 8,
         listall: true
       }
-      this.loading = true
       getAPI('listEvents', params).then(json => {
         this.events = []
-        this.loading = false
         if (json && json.listeventsresponse && json.listeventsresponse.event) {
           this.events = json.listeventsresponse.event
         }
