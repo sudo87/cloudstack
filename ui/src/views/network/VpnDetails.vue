@@ -22,6 +22,7 @@
       <div>
         <p>{{ $t('message.enabled.vpn') }} <strong>{{ remoteAccessVpn.publicip }}</strong></p>
         <p>{{ $t('message.enabled.vpn.ip.sec') }} <strong>{{ remoteAccessVpn.presharedkey }}</strong></p>
+        <p>{{ $t('message.enabled.vpn.ip.range') }} <strong>{{ remoteAccessVpn.iprange }}</strong></p>
         <a-divider/>
         <a-button
           style="margin-left: 10px"

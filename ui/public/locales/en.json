@@ -3350,6 +3350,7 @@
 "message.enable.vpn.processing": "Enabling VPN...",
 "message.enabled.vpn": "Your remote access VPN is currently enabled and can be accessed via the IP",
 "message.enabled.vpn.ip.sec": "Your IPSec pre-shared key is",
+"message.enabled.vpn.ip.range": "Your VPN IP Range is",
 "message.enabling.security.group.provider": "Enabling security group provider",
 "message.enter.valid.nic.ip": "Please enter a valid IP address for NIC",
 "message.error.access.key": "Please enter access key.",
