@@ -50,7 +50,8 @@
         ref="formRef"
         :model="form"
         :rules="rules"
-        layout="vertical">
+        layout="vertical"
+        @finish="handleSubmit">
 
         <a-form-item name="name" ref="name">
           <a-input
@@ -82,7 +83,7 @@
             danger
             :disabled="form.name !== resource.name"
             :loading="loading"
-            @click="handleSubmit">
+            htmlType="submit">
             {{ $t('label.delete') }}
           </a-button>
         </div>

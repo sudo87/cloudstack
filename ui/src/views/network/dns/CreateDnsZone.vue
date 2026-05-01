@@ -22,7 +22,8 @@
         ref="formRef"
         :model="form"
         :rules="rules"
-        layout="vertical">
+        layout="vertical"
+        @finish="handleSubmit">
 
         <a-form-item name="dnsserverid" ref="dnsserverid">
           <template #label>
@@ -81,7 +82,7 @@
           <a-button
             type="primary"
             :loading="loading"
-            @click="handleSubmit">
+            htmlType="submit">
             {{ $t('label.ok') }}
           </a-button>
         </div>
