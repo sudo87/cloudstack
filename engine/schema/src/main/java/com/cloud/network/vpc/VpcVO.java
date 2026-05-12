@@ -111,6 +111,9 @@ public class VpcVO implements Vpc {
     @Column(name = "keep_mac_address_on_public_nic")
     private boolean keepMacAddressOnPublicNic = true;
 
+    @Column(name = "public_network_rate")
+    private Integer publicNetworkRate;
+
     @Transient
     boolean rollingRestart = false;
 
@@ -332,5 +335,13 @@ public class VpcVO implements Vpc {
 
     public void setKeepMacAddressOnPublicNic(boolean keepMacAddressOnPublicNic) {
         this.keepMacAddressOnPublicNic = keepMacAddressOnPublicNic;
+    }
+
+    public Integer getPublicNetworkRate() {
+        return publicNetworkRate;
+    }
+
+    public void setPublicNetworkRate(Integer publicNetworkRate) {
+        this.publicNetworkRate = publicNetworkRate;
     }
 }

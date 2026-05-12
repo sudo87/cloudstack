@@ -74,6 +74,13 @@ public class UpdateVPCCmd extends BaseAsyncCustomIdCmd implements UserCmd {
             type = CommandType.BOOLEAN, since = "4.23.0", authorized = {RoleType.Admin})
     private Boolean keepMacAddressOnPublicNic;
 
+    @Parameter(name = ApiConstants.PUBLIC_NETWORK_RATE,
+            type = CommandType.INTEGER,
+            since = "4.21.0",
+            description = "Maximum network rate (Mbps) for the VR's public interface for this VPC. Overrides the VPC offering value. Use -1 to remove the override.",
+            authorized = {RoleType.Admin})
+    private Integer publicNetworkRate;
+
     /////////////////////////////////////////////////////
     /////////////////// Accessors ///////////////////////
     /////////////////////////////////////////////////////
@@ -104,6 +111,10 @@ public class UpdateVPCCmd extends BaseAsyncCustomIdCmd implements UserCmd {
 
     public Boolean getKeepMacAddressOnPublicNic() {
         return keepMacAddressOnPublicNic;
+    }
+
+    public Integer getPublicNetworkRate() {
+        return publicNetworkRate;
     }
 
     /////////////////////////////////////////////////////

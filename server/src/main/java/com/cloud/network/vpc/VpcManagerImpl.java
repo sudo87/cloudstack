@@ -590,6 +590,7 @@ public class VpcManagerImpl extends ManagerBase implements VpcManager, VpcProvis
         boolean specifyAsNumber = cmd.getSpecifyAsNumber();
         String routingModeString = cmd.getRoutingMode();
         boolean conserveMode = cmd.isConserveMode();
+        Integer publicNetworkRate = cmd.getPublicNetworkRate();
 
         // check if valid domain
         if (CollectionUtils.isNotEmpty(cmd.getDomainIds())) {
@@ -628,7 +629,7 @@ public class VpcManagerImpl extends ManagerBase implements VpcManager, VpcProvis
 
         return createVpcOffering(vpcOfferingName, displayText, supportedServices,
                 serviceProviderList, serviceCapabilityList, internetProtocol, serviceOfferingId, provider, networkMode,
-                domainIds, zoneIds, (enable ? State.Enabled : State.Disabled), routingMode, specifyAsNumber, conserveMode);
+                domainIds, zoneIds, (enable ? State.Enabled : State.Disabled), routingMode, specifyAsNumber, conserveMode, publicNetworkRate);
     }
 
     @Override
@@ -637,6 +638,14 @@ public class VpcManagerImpl extends ManagerBase implements VpcManager, VpcProvis
                                          final Map serviceCapabilityList, final NetUtils.InternetProtocol internetProtocol, final Long serviceOfferingId,
                                          final String externalProvider, final NetworkOffering.NetworkMode networkMode, List<Long> domainIds, List<Long> zoneIds, State state,
                                          NetworkOffering.RoutingMode routingMode, boolean specifyAsNumber, boolean conserveMode) {
+        return createVpcOffering(name, displayText, supportedServices, serviceProviders, serviceCapabilityList, internetProtocol,
+                serviceOfferingId, externalProvider, networkMode, domainIds, zoneIds, state, routingMode, specifyAsNumber, conserveMode, null);
+    }
+
+    public VpcOffering createVpcOffering(final String name, final String displayText, final List<String> supportedServices, final Map<String, List<String>> serviceProviders,
+                                         final Map serviceCapabilityList, final NetUtils.InternetProtocol internetProtocol, final Long serviceOfferingId,
+                                         final String externalProvider, final NetworkOffering.NetworkMode networkMode, List<Long> domainIds, List<Long> zoneIds, State state,
+                                         NetworkOffering.RoutingMode routingMode, boolean specifyAsNumber, boolean conserveMode, Integer publicNetworkRate) {
 
         boolean isExternalProvider = externalProvider != null &&
                 Arrays.asList("NSX", "Netris").stream().anyMatch(s -> s.equalsIgnoreCase(externalProvider));
@@ -737,7 +746,7 @@ public class VpcManagerImpl extends ManagerBase implements VpcManager, VpcProvis
         final boolean offersRegionLevelVPC = isVpcOfferingForRegionLevelVpc(serviceCapabilityList);
         final boolean redundantRouter = isVpcOfferingRedundantRouter(serviceCapabilityList, redundantRouterService);
         final VpcOfferingVO offering = createVpcOffering(name, displayText, svcProviderMap, false, state, serviceOfferingId, supportsDistributedRouter, offersRegionLevelVPC,
-                redundantRouter, networkMode, routingMode, specifyAsNumber, conserveMode);
+                redundantRouter, networkMode, routingMode, specifyAsNumber, conserveMode, publicNetworkRate);
 
         if (offering != null) {
             List<VpcOfferingDetailsVO> detailsVO = new ArrayList<>();
@@ -766,6 +775,15 @@ public class VpcManagerImpl extends ManagerBase implements VpcManager, VpcProvis
     protected VpcOfferingVO createVpcOffering(final String name, final String displayText, final Map<Service, Set<Provider>> svcProviderMap,
                                               final boolean isDefault, final State state, final Long serviceOfferingId, final boolean supportsDistributedRouter, final boolean offersRegionLevelVPC,
                                               final boolean redundantRouter, NetworkOffering.NetworkMode networkMode, NetworkOffering.RoutingMode routingMode, boolean specifyAsNumber, boolean conserveMode) {
+        return createVpcOffering(name, displayText, svcProviderMap, isDefault, state, serviceOfferingId,
+                supportsDistributedRouter, offersRegionLevelVPC, redundantRouter, networkMode, routingMode, specifyAsNumber, conserveMode, null);
+    }
+
+    @DB
+    protected VpcOfferingVO createVpcOffering(final String name, final String displayText, final Map<Service, Set<Provider>> svcProviderMap,
+                                              final boolean isDefault, final State state, final Long serviceOfferingId, final boolean supportsDistributedRouter, final boolean offersRegionLevelVPC,
+                                              final boolean redundantRouter, NetworkOffering.NetworkMode networkMode, NetworkOffering.RoutingMode routingMode, boolean specifyAsNumber, boolean conserveMode,
+                                              final Integer publicNetworkRate) {
 
         return Transaction.execute(new TransactionCallback<VpcOfferingVO>() {
             @Override
@@ -782,6 +800,9 @@ public class VpcManagerImpl extends ManagerBase implements VpcManager, VpcProvis
                     offering.setRoutingMode(routingMode);
                 }
                 offering.setConserveMode(conserveMode);
+                if (publicNetworkRate != null && publicNetworkRate > 0) {
+                    offering.setPublicNetworkRate(publicNetworkRate);
+                }
 
                 logger.debug("Adding vpc offering " + offering);
                 offering = _vpcOffDao.persist(offering);
@@ -1436,6 +1457,7 @@ public class VpcManagerImpl extends ManagerBase implements VpcManager, VpcProvis
         final List<Long> domainIds = cmd.getDomainIds();
         final List<Long> zoneIds = cmd.getZoneIds();
         final Integer sortKey = cmd.getSortKey();
+        final Integer publicNetworkRate = cmd.getPublicNetworkRate();
 
         // check if valid domain
         if (CollectionUtils.isNotEmpty(domainIds)) {
@@ -1454,10 +1476,14 @@ public class VpcManagerImpl extends ManagerBase implements VpcManager, VpcProvis
             }
         }
 
-        return updateVpcOfferingInternal(offeringId, vpcOfferingName, displayText, state, sortKey, domainIds, zoneIds);
+        return updateVpcOfferingInternal(offeringId, vpcOfferingName, displayText, state, sortKey, domainIds, zoneIds, publicNetworkRate);
     }
 
     private VpcOffering updateVpcOfferingInternal(long vpcOffId, String vpcOfferingName, String displayText, String state, Integer sortKey, final List<Long> domainIds, final List<Long> zoneIds) {
+        return updateVpcOfferingInternal(vpcOffId, vpcOfferingName, displayText, state, sortKey, domainIds, zoneIds, null);
+    }
+
+    private VpcOffering updateVpcOfferingInternal(long vpcOffId, String vpcOfferingName, String displayText, String state, Integer sortKey, final List<Long> domainIds, final List<Long> zoneIds, final Integer publicNetworkRate) {
         // Verify input parameters
         final VpcOfferingVO offeringToUpdate = _vpcOffDao.findById(vpcOffId);
         if (offeringToUpdate == null) {
@@ -1507,6 +1533,10 @@ public class VpcManagerImpl extends ManagerBase implements VpcManager, VpcProvis
             }
             if (sortKey != null) {
                 offering.setSortKey(sortKey);
+            }
+            if (publicNetworkRate != null) {
+                // -1 means remove the limit
+                offering.setPublicNetworkRate(publicNetworkRate < 0 ? null : publicNetworkRate);
             }
 
             if (!_vpcOffDao.update(vpcOffId, offering)) {
@@ -1569,6 +1599,16 @@ public class VpcManagerImpl extends ManagerBase implements VpcManager, VpcProvis
     public Vpc createVpc(final long zoneId, final long vpcOffId, final long vpcOwnerId, final String vpcName, final String displayText, final String cidr, String networkDomain,
                          final String ip4Dns1, final String ip4Dns2, final String ip6Dns1, final String ip6Dns2, final Boolean displayVpc, Integer publicMtu,
                          final Integer cidrSize, final Long asNumber, final List<Long> bgpPeerIds, Boolean useVrIpResolver, boolean keepMacAddressOnPublicNic) throws ResourceAllocationException {
+        return createVpc(zoneId, vpcOffId, vpcOwnerId, vpcName, displayText, cidr, networkDomain, ip4Dns1, ip4Dns2,
+                ip6Dns1, ip6Dns2, displayVpc, publicMtu, cidrSize, asNumber, bgpPeerIds, useVrIpResolver, keepMacAddressOnPublicNic, null);
+    }
+
+    @Override
+    @ActionEvent(eventType = EventTypes.EVENT_VPC_CREATE, eventDescription = "creating vpc", create = true)
+    public Vpc createVpc(final long zoneId, final long vpcOffId, final long vpcOwnerId, final String vpcName, final String displayText, final String cidr, String networkDomain,
+                         final String ip4Dns1, final String ip4Dns2, final String ip6Dns1, final String ip6Dns2, final Boolean displayVpc, Integer publicMtu,
+                         final Integer cidrSize, final Long asNumber, final List<Long> bgpPeerIds, Boolean useVrIpResolver, boolean keepMacAddressOnPublicNic,
+                         final Integer publicNetworkRate) throws ResourceAllocationException {
         final Account caller = CallContext.current().getCallingAccount();
         final Account owner = _accountMgr.getAccount(vpcOwnerId);
 
@@ -1669,6 +1709,9 @@ public class VpcManagerImpl extends ManagerBase implements VpcManager, VpcProvis
         vpc.setDisplay(Boolean.TRUE.equals(displayVpc));
         vpc.setUseRouterIpResolver(Boolean.TRUE.equals(useVrIpResolver));
         vpc.setKeepMacAddressOnPublicNic(keepMacAddressOnPublicNic);
+        if (publicNetworkRate != null && publicNetworkRate > 0) {
+            vpc.setPublicNetworkRate(publicNetworkRate);
+        }
 
         try (CheckedReservation vpcReservation = new CheckedReservation(owner, ResourceType.vpc, null, null, 1L, reservationDao, _resourceLimitMgr)) {
             if (vpc.getCidr() == null && cidrSize != null) {
@@ -1730,7 +1773,7 @@ public class VpcManagerImpl extends ManagerBase implements VpcManager, VpcProvis
         Vpc vpc = createVpc(cmd.getZoneId(), cmd.getVpcOffering(), cmd.getEntityOwnerId(), cmd.getVpcName(), cmd.getDisplayText(),
             cmd.getCidr(), cmd.getNetworkDomain(), cmd.getIp4Dns1(), cmd.getIp4Dns2(), cmd.getIp6Dns1(),
             cmd.getIp6Dns2(), cmd.isDisplay(), cmd.getPublicMtu(), cmd.getCidrSize(), cmd.getAsNumber(), bgpPeerIds,
-            cmd.getUseVrIpResolver(), cmd.getKeepMacAddressOnPublicNic());
+            cmd.getUseVrIpResolver(), cmd.getKeepMacAddressOnPublicNic(), cmd.getPublicNetworkRate());
 
         String sourceNatIP = cmd.getSourceNatIP();
         boolean forNsx = isVpcForProvider(Provider.Nsx, vpc);
@@ -1943,13 +1986,21 @@ public class VpcManagerImpl extends ManagerBase implements VpcManager, VpcProvis
     @Override
     public Vpc updateVpc(UpdateVPCCmd cmd) throws ResourceUnavailableException, InsufficientCapacityException {
         return updateVpc(cmd.getId(), cmd.getVpcName(), cmd.getDisplayText(), cmd.getCustomId(),
-                cmd.isDisplayVpc(), cmd.getPublicMtu(), cmd.getSourceNatIP(), cmd.getKeepMacAddressOnPublicNic());
+                cmd.isDisplayVpc(), cmd.getPublicMtu(), cmd.getSourceNatIP(), cmd.getKeepMacAddressOnPublicNic(),
+                cmd.getPublicNetworkRate());
     }
 
     @Override
     @ActionEvent(eventType = EventTypes.EVENT_VPC_UPDATE, eventDescription = "updating vpc")
     public Vpc updateVpc(final long vpcId, final String vpcName, final String displayText, final String customId,
                          final Boolean displayVpc, Integer mtu, String sourceNatIp, Boolean keepMacAddressOnPublicNic) throws ResourceUnavailableException, InsufficientCapacityException {
+        return updateVpc(vpcId, vpcName, displayText, customId, displayVpc, mtu, sourceNatIp, keepMacAddressOnPublicNic, null);
+    }
+
+    @ActionEvent(eventType = EventTypes.EVENT_VPC_UPDATE, eventDescription = "updating vpc")
+    public Vpc updateVpc(final long vpcId, final String vpcName, final String displayText, final String customId,
+                         final Boolean displayVpc, Integer mtu, String sourceNatIp, Boolean keepMacAddressOnPublicNic,
+                         final Integer publicNetworkRate) throws ResourceUnavailableException, InsufficientCapacityException {
         final Account caller = CallContext.current().getCallingAccount();
 
         // Verify input parameters
@@ -1983,6 +2034,11 @@ public class VpcManagerImpl extends ManagerBase implements VpcManager, VpcProvis
 
         if (keepMacAddressOnPublicNic != null) {
             vpc.setKeepMacAddressOnPublicNic(keepMacAddressOnPublicNic);
+        }
+
+        if (publicNetworkRate != null) {
+            // -1 means remove the per-VPC override (fall back to offering value)
+            vpc.setPublicNetworkRate(publicNetworkRate < 0 ? null : publicNetworkRate);
         }
 
         mtu = validateMtu(vpcToUpdate, mtu);

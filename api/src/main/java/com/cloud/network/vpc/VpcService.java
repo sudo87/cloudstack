@@ -60,6 +60,12 @@ public interface VpcService {
                   String ip4Dns1, String ip4Dns2, String ip6Dns1, String ip6Dns2, Boolean displayVpc, Integer publicMtu, Integer cidrSize,
                   Long asNumber, List<Long> bgpPeerIds, Boolean useVrIpResolver, boolean keepMacAddressOnPublicNic) throws ResourceAllocationException;
 
+    /** Overload that also accepts a per-VPC public interface rate cap (Mbps). */
+    Vpc createVpc(long zoneId, long vpcOffId, long vpcOwnerId, String vpcName, String displayText, String cidr, String networkDomain,
+                  String ip4Dns1, String ip4Dns2, String ip6Dns1, String ip6Dns2, Boolean displayVpc, Integer publicMtu, Integer cidrSize,
+                  Long asNumber, List<Long> bgpPeerIds, Boolean useVrIpResolver, boolean keepMacAddressOnPublicNic,
+                  Integer publicNetworkRate) throws ResourceAllocationException;
+
     /**
      * Persists VPC record in the database
      *

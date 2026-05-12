@@ -205,6 +205,7 @@ import com.cloud.utils.exception.CloudRuntimeException;
 import com.cloud.utils.exception.ExceptionProxyObject;
 import com.cloud.utils.fsm.NoTransitionException;
 import com.cloud.vm.dao.NicDao;
+import com.cloud.vm.dao.NicDetailsDao;
 import com.cloud.vm.dao.UserVmDao;
 import com.cloud.vm.dao.VMInstanceDetailsDao;
 import com.cloud.vm.snapshot.VMSnapshotVO;
@@ -231,6 +232,9 @@ public class UserVmManagerImplTest {
 
     @Mock
     protected NicDao nicDao;
+
+    @Mock
+    private NicDetailsDao nicDetailsDao;
 
     @Mock
     private NetworkDao _networkDao;
@@ -4299,6 +4303,7 @@ public class UserVmManagerImplTest {
     public void updateVirtualMachineNicTestValidInputReturnNicUserVm() throws ResourceUnavailableException {
         Mockito.doReturn(nicId).when(updateVmNicCmd).getNicId();
         Mockito.doReturn(true).when(updateVmNicCmd).isEnabled();
+        Mockito.doReturn(null).when(updateVmNicCmd).getNetworkRate();
         Mockito.doReturn(nicMock).when(nicDao).findById(nicId);
         Mockito.doReturn(vmId).when(nicMock).getInstanceId();
         Mockito.doReturn(userVmVoMock).when(userVmDao).findById(vmId);
@@ -4311,6 +4316,8 @@ public class UserVmManagerImplTest {
 
         Assert.assertNotNull(result);
     }
+
+
 
     @Test
     public void testTransitionExpungingToErrorVmInExpungingState() throws Exception {

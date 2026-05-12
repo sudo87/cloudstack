@@ -1,0 +1,58 @@
+// Licensed to the Apache Software Foundation (ASF) under one
+// or more contributor license agreements.  See the NOTICE file
+// distributed with this work for additional information
+// regarding copyright ownership.  The ASF licenses this file
+// to you under the Apache License, Version 2.0 (the
+// "License"); you may not use this file except in compliance
+// with the License.  You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+package com.cloud.agent.api;
+
+/**
+ * Sent from the management server to the KVM agent to hot-update the
+ * bandwidth limit on a specific VM NIC without requiring a restart.
+ * The agent locates the NIC by MAC address, injects a new {@code <bandwidth>}
+ * XML element via {@code virDomainUpdateDeviceFlags}, and applies it both
+ * live and to the persistent config.
+ */
+public class UpdateNicRateCommand extends Command {
+
+    private String vmName;
+    private String nicMacAddress;
+    /** Bandwidth cap in Mbps. Value {@code <= 0} removes any existing cap. */
+    private int rateMbps;
+
+    protected UpdateNicRateCommand() {
+    }
+
+    public UpdateNicRateCommand(String vmName, String nicMacAddress, int rateMbps) {
+        this.vmName = vmName;
+        this.nicMacAddress = nicMacAddress;
+        this.rateMbps = rateMbps;
+    }
+
+    public String getVmName() {
+        return vmName;
+    }
+
+    public String getNicMacAddress() {
+        return nicMacAddress;
+    }
+
+    public int getRateMbps() {
+        return rateMbps;
+    }
+
+    @Override
+    public boolean executeInSequence() {
+        return false;
+    }
+}

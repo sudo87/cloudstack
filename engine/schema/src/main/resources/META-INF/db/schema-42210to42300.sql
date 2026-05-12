@@ -131,3 +131,7 @@ CREATE TABLE IF NOT EXISTS `cloud_usage`.`quota_tariff_usage` (
 -- Add the 'keep_mac_address_on_public_nic' column to the 'cloud.networks' and 'cloud.vpc' tables
 CALL `cloud`.`IDEMPOTENT_ADD_COLUMN`('cloud.networks', 'keep_mac_address_on_public_nic', 'TINYINT(1) NOT NULL DEFAULT 1');
 CALL `cloud`.`IDEMPOTENT_ADD_COLUMN`('cloud.vpc', 'keep_mac_address_on_public_nic', 'TINYINT(1) NOT NULL DEFAULT 1');
+
+-- Network Throttling Enhancement: public network rate limit per VPC
+CALL `cloud`.`IDEMPOTENT_ADD_COLUMN`('cloud.vpc_offerings', 'public_network_rate', 'INT DEFAULT NULL COMMENT ''Max network rate (Mbps) on VR public interface; NULL = unlimited''');
+CALL `cloud`.`IDEMPOTENT_ADD_COLUMN`('cloud.vpc', 'public_network_rate', 'INT DEFAULT NULL COMMENT ''Effective public rate limit (Mbps); overrides offering value when set''');

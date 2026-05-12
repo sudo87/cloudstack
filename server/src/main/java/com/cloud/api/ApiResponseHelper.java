@@ -2895,6 +2895,19 @@ public class ApiResponseHelper implements ResponseGenerator, ResourceIdSupport {
             response.setKeepMacAddressOnPublicNic(network.getKeepMacAddressOnPublicNic());
         }
 
+        // Effective network rate: prefer dynamic detail override, then fall back to model
+        NetworkDetailVO rateDetail = networkDetailsDao.findDetail(network.getId(), "network.rate.mbps");
+        if (rateDetail != null) {
+            try {
+                response.setNetworkRate(Integer.parseInt(rateDetail.getValue()));
+            } catch (NumberFormatException ignored) { /* ignore bad persisted value */ }
+        } else {
+            Integer modelRate = _ntwkModel.getNetworkRate(network.getId(), null);
+            if (modelRate != null && modelRate > 0) {
+                response.setNetworkRate(modelRate);
+            }
+        }
+
         response.setObjectName("network");
         return response;
     }
@@ -3547,6 +3560,7 @@ public class ApiResponseHelper implements ResponseGenerator, ResourceIdSupport {
             serviceResponses.add(svcRsp);
         }
         response.setServices(serviceResponses);
+        response.setPublicNetworkRate(offering.getPublicNetworkRate());
         return response;
     }
 
@@ -3616,6 +3630,12 @@ public class ApiResponseHelper implements ResponseGenerator, ResourceIdSupport {
         response.setNetworks(networkResponses);
         response.setServices(serviceResponses);
         response.setPublicMtu(vpc.getPublicMtu());
+        // Effective public network rate: per-VPC override first, then VPC offering value
+        Integer effectivePublicNetworkRate = ((VpcVO) vpc).getPublicNetworkRate();
+        if (effectivePublicNetworkRate == null && voff != null) {
+            effectivePublicNetworkRate = voff.getPublicNetworkRate();
+        }
+        response.setPublicNetworkRate(effectivePublicNetworkRate);
         populateOwner(response, vpc);
 
         // set tag information

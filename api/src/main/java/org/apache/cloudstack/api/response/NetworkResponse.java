@@ -335,6 +335,11 @@ public class NetworkResponse extends BaseResponseWithAssociatedNetwork implement
     @Param(description = ApiConstants.PARAMETER_DESCRIPTION_KEEP_MAC_ADDRESS_ON_PUBLIC_NIC, since = "4.23.0")
     private Boolean keepMacAddressOnPublicNic;
 
+    @SerializedName(ApiConstants.NETWORKRATE)
+    @Param(description = "The effective maximum network rate (Mbps) for the guest-tier interface of the VR. " +
+            "Reflects any dynamic override stored in network details.", since = "4.21.0")
+    private Integer networkRate;
+
     public NetworkResponse() {}
 
     public Boolean getDisplayNetwork() {
@@ -709,5 +714,13 @@ public class NetworkResponse extends BaseResponseWithAssociatedNetwork implement
 
     public void setKeepMacAddressOnPublicNic(Boolean keepMacAddressOnPublicNic) {
         this.keepMacAddressOnPublicNic = keepMacAddressOnPublicNic;
+    }
+
+    public Integer getNetworkRate() {
+        return networkRate;
+    }
+
+    public void setNetworkRate(Integer networkRate) {
+        this.networkRate = networkRate;
     }
 }

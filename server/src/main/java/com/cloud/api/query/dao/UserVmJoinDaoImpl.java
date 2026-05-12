@@ -93,6 +93,7 @@ import com.cloud.vm.VirtualMachine;
 import com.cloud.vm.VirtualMachine.State;
 import com.cloud.vm.VmStats;
 import com.cloud.vm.dao.NicExtraDhcpOptionDao;
+import com.cloud.vm.dao.NicDetailsDao;
 import com.cloud.vm.dao.NicSecondaryIpVO;
 import com.cloud.vm.dao.VMInstanceDetailsDao;
 
@@ -129,6 +130,8 @@ public class UserVmJoinDaoImpl extends GenericDaoBaseWithTagInformation<UserVmJo
     VMTemplateDao vmTemplateDao;
     @Inject
     ExtensionHelper extensionHelper;
+    @Inject
+    NicDetailsDao nicDetailsDao;
 
     private final SearchBuilder<UserVmJoinVO> VmDetailSearch;
     private final SearchBuilder<UserVmJoinVO> activeVmByIsoSearch;
@@ -404,6 +407,26 @@ public class UserVmJoinDaoImpl extends GenericDaoBaseWithTagInformation<UserVmJo
                         .collect(Collectors.toList());
                 nicResponse.setExtraDhcpOptions(nicExtraDhcpOptionResponses);
 
+                // Populate effective NIC rate: override in nic_details takes precedence
+                String nicRateDetail = nicDetailsDao.findDetail(nic_id, ApiConstants.NETWORKRATE) != null
+                        ? nicDetailsDao.findDetail(nic_id, ApiConstants.NETWORKRATE).getValue() : null;
+                if (nicRateDetail != null) {
+                    try {
+                        nicResponse.setNetworkRate(Integer.parseInt(nicRateDetail));
+                    } catch (NumberFormatException ignored) {
+                        // malformed detail — leave unset
+                    }
+                } else {
+                    // Fall back to offering rate
+                    com.cloud.network.dao.NetworkVO nicNetwork = ApiDBUtils.findNetworkById(userVm.getNetworkId());
+                    if (nicNetwork != null) {
+                        Integer offeringRate = ApiDBUtils.getNetworkRate(nicNetwork.getNetworkOfferingId());
+                        if (offeringRate != null && offeringRate > 0) {
+                            nicResponse.setNetworkRate(offeringRate);
+                        }
+                    }
+                }
+
                 userVmResponse.addNic(nicResponse);
             }
         }
@@ -660,6 +683,27 @@ public class UserVmJoinDaoImpl extends GenericDaoBaseWithTagInformation<UserVmJo
                     .map(vo -> new NicExtraDhcpOptionResponse(Dhcp.DhcpOptionCode.valueOfInt(vo.getCode()).getName(), vo.getCode(), vo.getValue()))
                     .collect(Collectors.toList());
             nicResponse.setExtraDhcpOptions(nicExtraDhcpOptionResponses);
+
+            // Populate effective NIC rate
+            String nicRateDetail = nicDetailsDao.findDetail(nic_id, ApiConstants.NETWORKRATE) != null
+                    ? nicDetailsDao.findDetail(nic_id, ApiConstants.NETWORKRATE).getValue() : null;
+            if (nicRateDetail != null) {
+                try {
+                    nicResponse.setNetworkRate(Integer.parseInt(nicRateDetail));
+                } catch (NumberFormatException ignored) {
+                    // malformed detail — leave unset
+                }
+            } else {
+                Integer offeringRate = null;
+                com.cloud.network.dao.NetworkVO uvoNetwork = ApiDBUtils.findNetworkById(uvo.getNetworkId());
+                if (uvoNetwork != null) {
+                    offeringRate = ApiDBUtils.getNetworkRate(uvoNetwork.getNetworkOfferingId());
+                }
+                if (offeringRate != null && offeringRate > 0) {
+                    nicResponse.setNetworkRate(offeringRate);
+                }
+            }
+
             userVmData.addNic(nicResponse);
         }
 

@@ -182,6 +182,7 @@ import com.cloud.agent.api.GetVolumeStatsAnswer;
 import com.cloud.agent.api.GetVolumeStatsCommand;
 import com.cloud.agent.api.ModifyTargetsCommand;
 import com.cloud.agent.api.PvlanSetupCommand;
+import com.cloud.agent.api.UpdateNicRateCommand;
 import com.cloud.agent.api.RestoreVMSnapshotAnswer;
 import com.cloud.agent.api.RestoreVMSnapshotCommand;
 import com.cloud.agent.api.StartAnswer;
@@ -403,6 +404,7 @@ import com.cloud.vm.dao.DomainRouterDao;
 import com.cloud.vm.dao.InstanceGroupDao;
 import com.cloud.vm.dao.InstanceGroupVMMapDao;
 import com.cloud.vm.dao.NicDao;
+import com.cloud.vm.dao.NicDetailsDao;
 import com.cloud.vm.dao.NicExtraDhcpOptionDao;
 import com.cloud.vm.dao.UserVmDao;
 import com.cloud.vm.dao.VMInstanceDao;
@@ -462,6 +464,8 @@ public class UserVmManagerImpl extends ManagerBase implements UserVmManager, Vir
     private NetworkOrchestrationService _networkMgr;
     @Inject
     private AgentManager _agentMgr;
+    @Inject
+    private NicDetailsDao _nicDetailsDao;
     @Inject
     private ConfigurationManager _configMgr;
     @Inject
@@ -1938,8 +1942,48 @@ public class UserVmManagerImpl extends ManagerBase implements UserVmManager, Vir
 
         _accountMgr.checkAccess(caller, null, true, vmInstance);
 
-        if (isNicEnabled == null) {
+        if (isNicEnabled == null && cmd.getNetworkRate() == null) {
             return vmInstance;
+        }
+
+        // Handle dynamic NIC rate update
+        if (cmd.getNetworkRate() != null) {
+            int rateMbps = cmd.getNetworkRate();
+
+            // Persist override in nic_details (key: "networkrate")
+            NicDetailVO existing = _nicDetailsDao.findDetail(nic.getId(), ApiConstants.NETWORKRATE);
+            if (rateMbps <= 0) {
+                // Remove override — revert to offering rate
+                if (existing != null) {
+                    _nicDetailsDao.removeDetail(nic.getId(), ApiConstants.NETWORKRATE);
+                }
+            } else {
+                if (existing != null) {
+                    // Remove old value, then insert updated one
+                    _nicDetailsDao.removeDetail(nic.getId(), ApiConstants.NETWORKRATE);
+                }
+                _nicDetailsDao.persist(new NicDetailVO(nic.getId(), ApiConstants.NETWORKRATE, String.valueOf(rateMbps), true));
+            }
+
+            // Apply live if VM is running on KVM
+            if (vmInstance.getState() == State.Running && vmInstance.getHostId() != null) {
+                try {
+                    UpdateNicRateCommand rateCmd = new UpdateNicRateCommand(
+                            vmInstance.getInstanceName(), nic.getMacAddress(), rateMbps);
+                    _agentMgr.send(vmInstance.getHostId(), rateCmd);
+                    logger.info("Sent UpdateNicRateCommand for NIC {} on VM {} to {} Mbps.",
+                            nic.getMacAddress(), vmInstance.getInstanceName(), rateMbps);
+                } catch (Exception e) {
+                    logger.warn("Failed to send UpdateNicRateCommand for NIC {} on VM {}: {}. " +
+                            "The rate override has been persisted and will apply on next start.",
+                            nic.getMacAddress(), vmInstance.getInstanceName(), e.getMessage());
+                }
+            }
+
+            if (isNicEnabled == null) {
+                // rate-only update — no further action needed
+                return vmInstance;
+            }
         }
 
         boolean success = false;

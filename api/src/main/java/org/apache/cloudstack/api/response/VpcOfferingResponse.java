@@ -106,6 +106,10 @@ public class VpcOfferingResponse extends BaseResponse {
     @Param(description = "True if the VPC offering is IP conserve mode enabled, allowing public IP services to be used across multiple VPC tiers.", since = "4.23.0")
     private Boolean conserveMode;
 
+    @SerializedName(ApiConstants.PUBLIC_NETWORK_RATE)
+    @Param(description = "Maximum network rate (Mbps) on the VR's public interface; null means unlimited.", since = "4.21.0")
+    private Integer publicNetworkRate;
+
     public void setId(String id) {
         this.id = id;
     }
@@ -212,5 +216,13 @@ public class VpcOfferingResponse extends BaseResponse {
 
     public void setConserveMode(Boolean conserveMode) {
         this.conserveMode = conserveMode;
+    }
+
+    public Integer getPublicNetworkRate() {
+        return publicNetworkRate;
+    }
+
+    public void setPublicNetworkRate(Integer publicNetworkRate) {
+        this.publicNetworkRate = publicNetworkRate;
     }
 }

@@ -150,6 +150,11 @@ public class NicResponse extends BaseResponse {
     @Param(description = "whether the NIC is enabled or not")
     private Boolean isEnabled;
 
+    @SerializedName(ApiConstants.NETWORKRATE)
+    @Param(description = "Effective network rate in Mbps applied to this NIC. Reflects any per-NIC override stored in nic_details, " +
+            "falling back to the network offering rate.", since = "4.21.0")
+    private Integer networkRate;
+
     public void setVmId(String vmId) {
         this.vmId = vmId;
     }
@@ -427,5 +432,13 @@ public class NicResponse extends BaseResponse {
 
     public void setEnabled(Boolean enabled) {
         isEnabled = enabled;
+    }
+
+    public Integer getNetworkRate() {
+        return networkRate;
+    }
+
+    public void setNetworkRate(Integer networkRate) {
+        this.networkRate = networkRate;
     }
 }

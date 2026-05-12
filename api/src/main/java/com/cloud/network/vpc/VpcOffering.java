@@ -86,4 +86,10 @@ public interface VpcOffering extends InternalIdentity, Identity {
     Boolean isSpecifyAsNumber();
 
     boolean isConserveMode();
+
+    /**
+     * @return maximum network rate in Mbps on the VR's public interface; null means unlimited
+     */
+    Integer getPublicNetworkRate();
 }
+

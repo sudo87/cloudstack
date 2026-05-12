@@ -47,12 +47,25 @@ public class UpdateVmNicCmd extends BaseAsyncCmd {
     @Parameter(name = ApiConstants.ENABLED, type = CommandType.BOOLEAN, description = "If true, sets the NIC state to UP; otherwise, sets the NIC state to DOWN")
     private Boolean enabled;
 
+    @Parameter(name = ApiConstants.NETWORKRATE,
+            type = CommandType.INTEGER,
+            since = "4.21.0",
+            description = "Maximum network rate in Mbps to apply to this NIC. Applies dynamically on KVM via libvirt " +
+                    "without requiring a VM restart. Use -1 to remove any override and revert to the offering rate. " +
+                    "Persisted in nic_details so it survives VM stop/start.",
+            authorized = {RoleType.Admin})
+    private Integer networkRate;
+
     public Long getNicId() {
         return nicId;
     }
 
     public Boolean isEnabled() {
         return enabled;
+    }
+
+    public Integer getNetworkRate() {
+        return networkRate;
     }
 
     @Override

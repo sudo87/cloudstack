@@ -110,6 +110,15 @@ public class UpdateNetworkCmd extends BaseAsyncCustomIdCmd implements UserCmd {
             type = CommandType.BOOLEAN, since = "4.23.0", authorized = {RoleType.Admin})
     private Boolean keepMacAddressOnPublicNic;
 
+    @Parameter(name = ApiConstants.NETWORKRATE,
+            type = CommandType.INTEGER,
+            since = "4.21.0",
+            description = "Maximum network rate (Mbps) to be applied to the network's VR guest interface. "
+                    + "Overrides the value from the network offering. Use -1 to revert to the offering value. "
+                    + "Applied dynamically on KVM without requiring a network restart.",
+            authorized = {RoleType.Admin})
+    private Integer networkRate;
+
     /////////////////////////////////////////////////////
     /////////////////// Accessors ///////////////////////
     /////////////////////////////////////////////////////
@@ -193,6 +202,10 @@ public class UpdateNetworkCmd extends BaseAsyncCustomIdCmd implements UserCmd {
 
     public Boolean getKeepMacAddressOnPublicNic() {
         return keepMacAddressOnPublicNic;
+    }
+
+    public Integer getNetworkRate() {
+        return networkRate;
     }
 
     /////////////////////////////////////////////////////

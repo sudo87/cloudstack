@@ -68,6 +68,12 @@ public class UpdateVPCOfferingCmd extends BaseAsyncCmd implements DomainAndZoneI
     @Parameter(name = ApiConstants.SORT_KEY, type = CommandType.INTEGER, description = "Sort key of the VPC offering, integer")
     private Integer sortKey;
 
+    @Parameter(name = ApiConstants.PUBLIC_NETWORK_RATE,
+            type = CommandType.INTEGER,
+            since = "4.21.0",
+            description = "Maximum network rate (Mbps) for the VR's public interface. Use -1 to remove the limit. Applies only to VPCs.")
+    private Integer publicNetworkRate;
+
     /////////////////////////////////////////////////////
     /////////////////// Accessors ///////////////////////
     /////////////////////////////////////////////////////
@@ -98,6 +104,10 @@ public class UpdateVPCOfferingCmd extends BaseAsyncCmd implements DomainAndZoneI
 
     public Integer getSortKey() {
         return sortKey;
+    }
+
+    public Integer getPublicNetworkRate() {
+        return publicNetworkRate;
     }
 
     /////////////////////////////////////////////////////

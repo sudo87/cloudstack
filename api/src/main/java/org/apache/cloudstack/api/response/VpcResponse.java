@@ -189,6 +189,11 @@ public class VpcResponse extends BaseResponseWithAnnotations implements Controll
     @Param(description = ApiConstants.PARAMETER_DESCRIPTION_KEEP_MAC_ADDRESS_ON_PUBLIC_NIC, since = "4.23.0")
     private Boolean keepMacAddressOnPublicNic;
 
+    @SerializedName(ApiConstants.PUBLIC_NETWORK_RATE)
+    @Param(description = "Maximum network rate (Mbps) on the VR's public interface for this VPC. "
+            + "Instance-level override; falls back to the VPC offering value if not set.", since = "4.21.0")
+    private Integer publicNetworkRate;
+
     public void setId(final String id) {
         this.id = id;
     }
@@ -373,5 +378,13 @@ public class VpcResponse extends BaseResponseWithAnnotations implements Controll
 
     public void setKeepMacAddressOnPublicNic(Boolean keepMacAddressOnPublicNic) {
         this.keepMacAddressOnPublicNic = keepMacAddressOnPublicNic;
+    }
+
+    public Integer getPublicNetworkRate() {
+        return publicNetworkRate;
+    }
+
+    public void setPublicNetworkRate(Integer publicNetworkRate) {
+        this.publicNetworkRate = publicNetworkRate;
     }
 }

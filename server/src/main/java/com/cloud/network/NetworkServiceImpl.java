@@ -95,6 +95,7 @@ import com.cloud.agent.api.Command;
 import com.cloud.agent.api.to.IpAddressTO;
 import com.cloud.agent.api.to.NicTO;
 import com.cloud.agent.manager.Commands;
+import com.cloud.agent.api.routing.UpdateInterfaceBandwidthCommand;
 import com.cloud.alert.AlertManager;
 import com.cloud.api.ApiDBUtils;
 import com.cloud.api.query.dao.DomainRouterJoinDao;
@@ -3177,6 +3178,7 @@ public class NetworkServiceImpl extends ManagerBase implements NetworkService, C
         String ip6Dns1 = cmd.getIp6Dns1();
         String ip6Dns2 = cmd.getIp6Dns2();
         Boolean keepMacAddressOnPublicNic = cmd.getKeepMacAddressOnPublicNic();
+        Integer networkRate = cmd.getNetworkRate();
 
         boolean restartNetwork = false;
 
@@ -3492,6 +3494,11 @@ public class NetworkServiceImpl extends ManagerBase implements NetworkService, C
             }
         }
 
+        // Dynamic network rate update (no restart needed on KVM)
+        if (networkRate != null) {
+            applyDynamicNetworkRate(network, routers, networkRate);
+        }
+
         ReservationContext context = new ReservationContextImpl(null, null, callerUser, callerAccount);
         // 1) Shutdown all the elements and cleanup all the rules. Don't allow to shutdown network in intermediate
         // states - Shutdown and Implementing
@@ -3772,6 +3779,58 @@ public class NetworkServiceImpl extends ManagerBase implements NetworkService, C
         }
         return success;
     }
+
+    /**
+     * Dynamically applies (or removes) a bandwidth limit on the guest-tier interface of each active VR
+     * that belongs to the given network, without requiring a network restart.
+     *
+     * @param network     The guest network to throttle.
+     * @param routers     The VRs currently serving this network.
+     * @param networkRate Desired rate in Mbps; &lt;= 0 removes the limit.
+     */
+    protected void applyDynamicNetworkRate(NetworkVO network, List<DomainRouterVO> routers, int networkRate) {
+        int kbps = networkRate > 0 ? networkRate * 1024 : 0;
+        final String detailKey = "network.rate.mbps";
+
+        // Persist the override in network_details so it survives restarts
+        NetworkDetailVO existing = _networkDetailsDao.findDetail(network.getId(), detailKey);
+        if (networkRate > 0) {
+            String rateStr = String.valueOf(networkRate);
+            if (existing != null) {
+                existing.setValue(rateStr);
+                _networkDetailsDao.update(existing.getId(), existing);
+            } else {
+                _networkDetailsDao.persist(new NetworkDetailVO(network.getId(), detailKey, rateStr, false));
+            }
+        } else if (existing != null) {
+            _networkDetailsDao.remove(existing.getId());
+        }
+
+        for (DomainRouterVO router : routers) {
+            if (router.getState() != VirtualMachine.State.Running) {
+                logger.debug("Skipping rate update for router {} — not running", router);
+                continue;
+            }
+            // Find the guest NIC IP for this router on this network
+            NicVO guestNic = _nicDao.findByNtwkIdAndInstanceId(network.getId(), router.getId());
+            if (guestNic == null || guestNic.getIPv4Address() == null) {
+                logger.warn("Cannot find guest NIC for router {} on network {}", router, network);
+                continue;
+            }
+            String guestIp = guestNic.getIPv4Address();
+            UpdateInterfaceBandwidthCommand banCmd =
+                    new UpdateInterfaceBandwidthCommand(guestIp, TrafficType.Guest.name(), kbps, kbps);
+            Commands cmds = new Commands(Command.OnError.Continue);
+            cmds.addCommand("updateBandwidth", banCmd);
+            try {
+                networkHelper.sendCommandsToRouter(router, cmds);
+                logger.info("Applied network rate {}Mbps on router {} guest NIC {}", networkRate, router, guestIp);
+            } catch (ResourceUnavailableException e) {
+                logger.warn("Failed to apply network rate on router {}: {}", router, e.getMessage());
+            }
+        }
+    }
+
     private void updateNetworkIpv6(NetworkVO network, Long networkOfferingId) {
         boolean isIpv6Supported = _networkOfferingDao.isIpv6Supported(network.getNetworkOfferingId());
         boolean isIpv6SupportedNew = _networkOfferingDao.isIpv6Supported(networkOfferingId);

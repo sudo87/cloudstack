@@ -109,4 +109,10 @@ public interface Vpc extends ControlledEntity, Identity, InternalIdentity {
     boolean useRouterIpAsResolver();
 
     boolean getKeepMacAddressOnPublicNic();
+
+    /**
+     * @return the maximum network rate (Mbps) on the VR's public interface for this VPC;
+     *         null means fall back to the VPC offering value; 0 or negative means unlimited.
+     */
+    Integer getPublicNetworkRate();
 }

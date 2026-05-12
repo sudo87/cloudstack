@@ -173,6 +173,7 @@ public class EventTypes {
     public static final String EVENT_NETWORK_CREATE = "NETWORK.CREATE";
     public static final String EVENT_NETWORK_DELETE = "NETWORK.DELETE";
     public static final String EVENT_NETWORK_UPDATE = "NETWORK.UPDATE";
+    public static final String EVENT_NETWORK_RATE_UPDATE = "NETWORK.RATE.UPDATE";
     public static final String EVENT_NETWORK_MIGRATE = "NETWORK.MIGRATE";
     public static final String EVENT_FIREWALL_OPEN = "FIREWALL.OPEN";
     public static final String EVENT_FIREWALL_CLOSE = "FIREWALL.CLOSE";
@@ -584,6 +585,7 @@ public class EventTypes {
     public static final String EVENT_VPC_UPDATE = "VPC.UPDATE";
     public static final String EVENT_VPC_DELETE = "VPC.DELETE";
     public static final String EVENT_VPC_RESTART = "VPC.RESTART";
+    public static final String EVENT_VPC_PUBLIC_RATE_UPDATE = "VPC.PUBLICRATE.UPDATE";
 
     // Network ACL
     public static final String EVENT_NETWORK_ACL_CREATE = "NETWORK.ACL.CREATE";

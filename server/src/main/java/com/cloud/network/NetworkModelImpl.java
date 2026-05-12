@@ -104,8 +104,11 @@ import com.cloud.network.rules.FirewallRuleVO;
 import com.cloud.network.rules.dao.PortForwardingRulesDao;
 import com.cloud.network.vpc.Vpc;
 import com.cloud.network.vpc.VpcGatewayVO;
+import com.cloud.network.vpc.VpcVO;
+import com.cloud.network.vpc.VpcOffering;
 import com.cloud.network.vpc.dao.PrivateIpDao;
 import com.cloud.network.vpc.dao.VpcDao;
+import com.cloud.network.vpc.dao.VpcOfferingDao;
 import com.cloud.network.vpc.dao.VpcGatewayDao;
 import com.cloud.offering.NetworkOffering;
 import com.cloud.offering.NetworkOffering.Detail;
@@ -183,6 +186,8 @@ public class NetworkModelImpl extends ManagerBase implements NetworkModel, Confi
     NetworkPermissionDao _networkPermissionDao;
     @Inject
     VpcDao vpcDao;
+    @Inject
+    VpcOfferingDao vpcOfferingDao;
 
     private List<NetworkElement> networkElements;
 
@@ -1081,6 +1086,29 @@ public class NetworkModelImpl extends ManagerBase implements NetworkModel, Confi
                             return _configMgr.getNetworkOfferingNetworkRate(network.getNetworkOfferingId(), network.getDataCenterId());
                         }
                     } else if (TrafficType.Public.equals(network.getTrafficType())) {
+                        // For the VR public interface check the VPC-level public rate first,
+                        // then the VPC offering rate, then fall back to the guest-tier rate.
+                        final NicVO routerPublicNic = _nicDao.findByNtwkIdAndInstanceId(networkId, vmId);
+                        if (routerPublicNic != null) {
+                            // Find the VPC this router belongs to via the public network
+                            Long vpcId = network.getVpcId();
+                            if (vpcId != null) {
+                                final VpcVO vpc = vpcDao.findById(vpcId);
+                                if (vpc != null) {
+                                    Integer vpcPublicRate = vpc.getPublicNetworkRate();
+                                    if (vpcPublicRate == null) {
+                                        final VpcOffering vpcOff = vpcOfferingDao.findById(vpc.getVpcOfferingId());
+                                        if (vpcOff != null) {
+                                            vpcPublicRate = vpcOff.getPublicNetworkRate();
+                                        }
+                                    }
+                                    if (vpcPublicRate != null && vpcPublicRate > 0) {
+                                        return vpcPublicRate;
+                                    }
+                                }
+                            }
+                        }
+                        // Fall back: use rate from any guest-tier the router is connected to
                         List<NicVO> routerNics = _nicDao.listByVmId(vmId);
                         for (final Nic routerNic : routerNics) {
                             final NetworkVO nw = _networksDao.findById(routerNic.getNetworkId());
