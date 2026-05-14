@@ -17,14 +17,14 @@
 
 package com.cloud.agent.api.routing;
 
-import com.cloud.agent.api.Command;
+
 
 /**
  * Sent to a Virtual Router to dynamically apply bandwidth shaping on a
  * named network interface using Linux tc (traffic control). A value of 0
  * or negative for ingressMbps / egressMbps removes an existing limit.
  */
-public class UpdateInterfaceBandwidthCommand extends Command {
+public class UpdateInterfaceBandwidthCommand extends NetworkElementCommand {
 
     /** The interface IP used to identify which VR interface to shape. */
     private String interfaceIp;
@@ -35,21 +35,21 @@ public class UpdateInterfaceBandwidthCommand extends Command {
      */
     private String trafficType;
 
-    /** Ingress (inbound) rate limit in Mbps; &lt;= 0 means no limit. */
-    private int ingressMbps;
+    /** Ingress (inbound) rate limit in kbps; <= 0 means no limit. */
+    private int ingressKbps;
 
-    /** Egress (outbound) rate limit in Mbps; &lt;= 0 means no limit. */
-    private int egressMbps;
+    /** Egress (outbound) rate limit in kbps; <= 0 means no limit. */
+    private int egressKbps;
 
     protected UpdateInterfaceBandwidthCommand() {
         // For serialization
     }
 
-    public UpdateInterfaceBandwidthCommand(String interfaceIp, String trafficType, int ingressMbps, int egressMbps) {
+    public UpdateInterfaceBandwidthCommand(String interfaceIp, String trafficType, int ingressKbps, int egressKbps) {
         this.interfaceIp = interfaceIp;
         this.trafficType = trafficType;
-        this.ingressMbps = ingressMbps;
-        this.egressMbps = egressMbps;
+        this.ingressKbps = ingressKbps;
+        this.egressKbps = egressKbps;
     }
 
     public String getInterfaceIp() {
@@ -60,12 +60,12 @@ public class UpdateInterfaceBandwidthCommand extends Command {
         return trafficType;
     }
 
-    public int getIngressMbps() {
-        return ingressMbps;
+    public int getIngressKbps() {
+        return ingressKbps;
     }
 
-    public int getEgressMbps() {
-        return egressMbps;
+    public int getEgressKbps() {
+        return egressKbps;
     }
 
     @Override

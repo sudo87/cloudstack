@@ -96,6 +96,7 @@ import com.cloud.agent.api.to.IpAddressTO;
 import com.cloud.agent.api.to.NicTO;
 import com.cloud.agent.manager.Commands;
 import com.cloud.agent.api.routing.UpdateInterfaceBandwidthCommand;
+import com.cloud.agent.api.routing.NetworkElementCommand;
 import com.cloud.alert.AlertManager;
 import com.cloud.api.ApiDBUtils;
 import com.cloud.api.query.dao.DomainRouterJoinDao;
@@ -186,6 +187,7 @@ import com.cloud.network.guru.NetworkGuru;
 import com.cloud.network.nsx.NsxService;
 import com.cloud.network.router.CommandSetupHelper;
 import com.cloud.network.router.NetworkHelper;
+import com.cloud.network.router.RouterControlHelper;
 import com.cloud.network.router.VirtualRouter;
 import com.cloud.network.rules.FirewallRule.Purpose;
 import com.cloud.network.rules.FirewallRuleVO;
@@ -445,6 +447,8 @@ public class NetworkServiceImpl extends ManagerBase implements NetworkService, C
     @Autowired
     @Qualifier("networkHelper")
     protected NetworkHelper networkHelper;
+    @Inject
+    protected RouterControlHelper _routerControlHelper;
 
     int _cidrLimit;
     boolean _allowSubdomainNetworkAccess;
@@ -3820,6 +3824,7 @@ public class NetworkServiceImpl extends ManagerBase implements NetworkService, C
             String guestIp = guestNic.getIPv4Address();
             UpdateInterfaceBandwidthCommand banCmd =
                     new UpdateInterfaceBandwidthCommand(guestIp, TrafficType.Guest.name(), kbps, kbps);
+            banCmd.setAccessDetail(NetworkElementCommand.ROUTER_IP, _routerControlHelper.getRouterControlIp(router.getId()));
             Commands cmds = new Commands(Command.OnError.Continue);
             cmds.addCommand("updateBandwidth", banCmd);
             try {

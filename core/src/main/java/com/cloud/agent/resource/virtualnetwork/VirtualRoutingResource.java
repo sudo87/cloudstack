@@ -36,6 +36,7 @@ import javax.naming.ConfigurationException;
 
 import com.cloud.agent.api.HandleCksIsoCommand;
 import org.apache.cloudstack.agent.routing.ManageServiceCommand;
+import com.cloud.agent.api.routing.UpdateInterfaceBandwidthCommand;
 import com.cloud.agent.api.routing.UpdateNetworkCommand;
 import com.cloud.agent.api.to.IpAddressTO;
 import com.cloud.network.router.VirtualRouter;
@@ -146,6 +147,10 @@ public class VirtualRoutingResource {
                 return execute((UpdateNetworkCommand) cmd);
             }
 
+            if (cmd instanceof UpdateInterfaceBandwidthCommand) {
+                return execute((UpdateInterfaceBandwidthCommand) cmd);
+            }
+
             if (cmd instanceof HandleCksIsoCommand) {
                 return execute((HandleCksIsoCommand) cmd);
             }
@@ -248,6 +253,17 @@ public class VirtualRoutingResource {
         if (logger.isDebugEnabled())
             logger.debug("Use router's private IP for SSH control. IP : " + routerIp);
         return routerIp;
+    }
+
+    private Answer execute(UpdateInterfaceBandwidthCommand cmd) {
+        String routerIp = getRouterSshControlIp(cmd);
+        String args = String.format("%s %d %d", cmd.getInterfaceIp(), cmd.getIngressKbps(), cmd.getEgressKbps());
+        ExecutionResult result = _vrDeployer.executeInVR(routerIp, VRScripts.VR_UPDATE_BANDWIDTH, args);
+        if (result.isSuccess()) {
+            return new Answer(cmd, true, "Successfully updated bandwidth. Details: " + result.getDetails());
+        } else {
+            return new Answer(cmd, false, "Failed to update bandwidth. Details: " + result.getDetails());
+        }
     }
 
     private Answer execute(UpdateNetworkCommand cmd) {
